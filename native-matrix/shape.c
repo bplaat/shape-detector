@@ -1,4 +1,4 @@
-// gcc shape_detector.c -o shape_detector && ./shape_detector
+// gcc shape.c -o shape && ./shape
 
 #include <stdio.h>
 #include <stdlib.h>
