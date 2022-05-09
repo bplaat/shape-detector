@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machine Learning Shape Detector Painter</title>
+    <link rel="favicon" href="data:,">
+</head>
+<body>
+    <h1>Machine Learning Shape Detector Painter</h1>
+    <p>
+        <button id="clear-button">Clear canvas</button>
+    </p>
+    <canvas id="canvas" style="border: 1px solid black;"></canvas>
+    <p>Result: <b id="result-label"></b></p>
+    <pre id="output-label">Training...</pre>
+    <p>Made by <a href="https://bplaat.nl/" target="_blank">Bastiaan van der Plaat</a></p>
+
+    <script type="module">
+        import { NeuralNetwork } from './neural.js';
+
+        // Constants
+        const WIDTH = 3;
+        const HEIGHT = 3;
+        const PIXEL_SIZE = 128;
+
+        // Canvas
+        const canvas = document.getElementById('canvas');
+        const clearButton = document.getElementById('clear-button');
+        const resultLabel = document.getElementById('result-label');
+        const outputLabel = document.getElementById('output-label');
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = WIDTH * PIXEL_SIZE;
+        canvas.height = HEIGHT * PIXEL_SIZE;
+
+        // Drawing code
+        let data = new Float32Array(HEIGHT * WIDTH);
+        clearButton.addEventListener('click', () => {
+            data = new Float32Array(HEIGHT * WIDTH);
+        });
+
+        let down = false;
+        canvas.addEventListener('contextmenu', event => {
+            event.preventDefault();
+        });
+        canvas.addEventListener('mousedown', () => {
+            down = true;
+            const x = Math.floor((event.clientX - canvas.offsetLeft) / PIXEL_SIZE);
+            const y = Math.floor((event.clientY - canvas.offsetTop) / PIXEL_SIZE);
+            if (x < WIDTH && y < HEIGHT) {
+                data[y * WIDTH + x] = event.button == 0 ? 1 : 0;
+            }
+        });
+        canvas.addEventListener('mousemove', event => {
+            if (down) {
+                const x = Math.floor((event.clientX - canvas.offsetLeft) / PIXEL_SIZE);
+                const y = Math.floor((event.clientY - canvas.offsetTop) / PIXEL_SIZE);
+                if (x < WIDTH && y < HEIGHT) {
+                    data[y * WIDTH + x] = event.button == 0 ? 1 : 0;
+                }
+            }
+        });
+        canvas.addEventListener('mouseup', () => {
+            down = false;
+        });
+
+        // Neural network
+        const chars = '#.'.split('');
+
+        const network = new NeuralNetwork({
+            activation: 'sigmoid',
+            layers: [ 9, 6, 3 ]
+        });
+        const trainingSet = [
+            {
+                input: [
+                    1, 1, 1,
+                    1, 0, 1,
+                    1, 1, 1
+                ],
+                output: 'O'
+            },
+            {
+                input: [
+                    0, 1, 0,
+                    1, 0, 1,
+                    0, 1, 0
+                ],
+                output: 'O'
+            },
+            {
+                input: [
+                    0, 1, 0,
+                    1, 1, 1,
+                    0, 1, 0
+                ],
+                output: 'X'
+            },
+            {
+                input: [
+                    1, 0, 1,
+                    0, 1, 0,
+                    1, 0, 1
+                ],
+                output: 'X'
+            },
+            {
+                input: [
+                    1, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0
+                ],
+                output: '*'
+            },
+            {
+                input: [
+                    0, 1, 0,
+                    0, 0, 0,
+                    0, 0, 0
+                ],
+                output: '*'
+            },
+            {
+                input: [
+                    0, 0, 1,
+                    0, 0, 0,
+                    0, 0, 0
+                ],
+                output: '*'
+            }
+        ];
+        let trainingCycles = network.train(trainingSet, 0.01);
+        outputLabel.textContent = 'Trained in ' + trainingCycles + ' cyles';
+
+        // Game loop
+        function update() {
+            resultLabel.innerHTML = network.likely(data) + '<br>' +
+                Array.from(network.run(data)).map((x, i) => Object.keys(network.symbols)[i] + ': ' + (x * 100).toFixed(2) + '%').join('<br>');
+        }
+        function render() {
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    ctx.fillStyle = data[y * WIDTH + x] == 1 ? 'black' : 'white';
+                    ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                }
+            }
+        }
+        function loop() {
+            window.requestAnimationFrame(loop);
+            update();
+            render();
+        }
+        loop();
+    </script>
+</body>
+</html>
