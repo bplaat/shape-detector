@@ -54,10 +54,8 @@ class NeuralNetwork:
 
         # Train layers
         trainingCycles = 0
-        error = None
-        while error == None or error > maxError:
-            oldError = self.__error(trainingItems)
-
+        error = self.__error(trainingItems)
+        while error > maxError:
             changes = []
             for layer in self.layers:
                 y = random.randint(0, len(layer) - 1)
@@ -65,8 +63,10 @@ class NeuralNetwork:
                 changes.append({ 'layer': layer, 'x': x, 'y': y, 'weight': layer[y][x] })
                 layer[y][x] += random.uniform(-1, 1) / 100
 
-            error = self.__error(trainingItems)
-            if error > oldError:
+            newError = self.__error(trainingItems)
+            if newError < error:
+                error = newError
+            else:
                 for change in changes:
                     change['layer'][change['y']][change['x']] = change['weight']
 

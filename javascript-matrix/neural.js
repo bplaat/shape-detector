@@ -54,8 +54,8 @@ export class NeuralNetwork {
 
     run(input) {
         let result = new Float32Array(input);
-        for (let i = 0; i < this.layers.length; i++) {
-            result = this.layers[i].mul(result);
+        for (const layer of this.layers) {
+            result = layer.mul(result);
             if (this.activation == 'sigmoid') result = result.map(x => sigmoid(x));
             if (this.activation == 'relu') result = result.map(x => relu(x));
         }
@@ -65,8 +65,6 @@ export class NeuralNetwork {
     likely(input) {
         const result = this.run(input);
         const maxIndex = result.indexOf(Math.max(...result));
-        console.log(result);
-        console.log(maxIndex);
         for (const symbol in this.symbols) {
             if (this.symbols[symbol][maxIndex] == 1) {
                 return symbol;
@@ -95,18 +93,16 @@ export class NeuralNetwork {
         const symbols = Object.keys(this.symbols);
         for (let i = 0; i < symbols.length; i++) {
             for (let j = 0; j < symbols.length; j++) {
-                this.symbols[symbols[i]][j] = i == j ? 1 : 0;
+                this.symbols[symbols[i]].push(i == j ? 1 : 0);
             }
         }
 
         // Train weights
         let trainingCycles = 0;
-        let error = null;
-        while (error == null || error > maxError) {
-            const oldError = this._error(trainingItems);
-
+        let error = this._error(trainingItems);
+        while (error > maxError) {
             const changes = [];
-            for (const layer of this.layers.slice(0, -1)) {
+            for (const layer of this.layers) {
                 const y = randint(0, layer.rows - 1);
                 const x = randint(0, layer.columns - 1);
                 const weight = layer.get(x, y);
@@ -114,16 +110,16 @@ export class NeuralNetwork {
                 layer.set(x, y, weight + (Math.random() * 2 - 1) / 100);
             }
 
-            error = this._error(trainingItems);
-            if (trainingCycles % 10000 == 0) console.log(error);
-            if (error > oldError) {
+            const newError = this._error(trainingItems);
+            if (newError < error) {
+                error = newError;
+            } else {
                 for (const change of changes) {
                     change.layer.set(change.x, change.y, change.weight);
                 }
             }
             trainingCycles++;
         }
-        console.log(error);
         return trainingCycles;
     }
 }
