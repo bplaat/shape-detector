@@ -64,7 +64,7 @@ const trainingCycles = network.train([
         ],
         output: '*'
     }
-], 0.01);
+], 0.005);
 console.log(`Training done in ${trainingCycles} cycles`);
 console.log(network.symbols);
 

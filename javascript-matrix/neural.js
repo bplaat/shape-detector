@@ -7,13 +7,13 @@ export function sigmoid(x) {
 }
 
 export function relu(x) {
-    return x > 0 ? x : 0;
+    return Math.max(0, x);
 }
 
 export class Matrix {
-    constructor(rows, columns) {
-        this.rows = rows;
+    constructor(columns, rows) {
         this.columns = columns;
+        this.rows = rows;
         this.elements = new Float32Array(rows * columns);
     }
 
@@ -37,35 +37,25 @@ export class Matrix {
     }
 }
 
-export class Layer {
-    constructor(size) {
-        this.size = size;
-    }
-
-    project(nextLayer) {
-        this.weights = new Matrix(nextLayer.size, this.size);
-        for (let y = 0; y < this.weights.rows; y++) {
-            for (let x = 0; x < this.weights.columns; x++) {
-                this.weights.set(x, y, Math.random());
-            }
-        }
-    }
-}
-
 export class NeuralNetwork {
     constructor({ activation = 'sigmoid', layers }) {
         this.activation = activation;
-        this.layers = layers.map(layerSize => new Layer(layerSize));
-        for (let i = 0; i < this.layers.length - 1; i++) {
-            this.layers[i].project(this.layers[i + 1]);
+        this.layers = [];
+        for (let i = 0; i < layers.length - 1; i++) {
+            const layer = new Matrix(layers[i], layers[i + 1]);
+            for (let y = 0; y < layer.rows; y++) {
+                for (let x = 0; x < layer.columns; x++) {
+                    layer.set(x, y, Math.random() * 2 - 1);
+                }
+            }
+            this.layers.push(layer);
         }
     }
 
     run(input) {
-        let result = input.slice();
-        for (let i = 0; i < this.layers.length - 1; i++) {
-            const layer = this.layers[i];
-            result = layer.weights.mul(result);
+        let result = new Float32Array(input);
+        for (let i = 0; i < this.layers.length; i++) {
+            result = this.layers[i].mul(result);
             if (this.activation == 'sigmoid') result = result.map(x => sigmoid(x));
             if (this.activation == 'relu') result = result.map(x => relu(x));
         }
@@ -75,6 +65,8 @@ export class NeuralNetwork {
     likely(input) {
         const result = this.run(input);
         const maxIndex = result.indexOf(Math.max(...result));
+        console.log(result);
+        console.log(maxIndex);
         for (const symbol in this.symbols) {
             if (this.symbols[symbol][maxIndex] == 1) {
                 return symbol;
@@ -115,21 +107,23 @@ export class NeuralNetwork {
 
             const changes = [];
             for (const layer of this.layers.slice(0, -1)) {
-                const y = randint(0, layer.weights.rows - 1);
-                const x = randint(0, layer.weights.columns - 1);
-                const weight = layer.weights.get(x, y);
+                const y = randint(0, layer.rows - 1);
+                const x = randint(0, layer.columns - 1);
+                const weight = layer.get(x, y);
                 changes.push({ layer, x, y, weight });
-                layer.weights.set(x, y, weight + (Math.random() * 2 - 1) / 100);
+                layer.set(x, y, weight + (Math.random() * 2 - 1) / 100);
             }
 
             error = this._error(trainingItems);
+            if (trainingCycles % 10000 == 0) console.log(error);
             if (error > oldError) {
                 for (const change of changes) {
-                    change.layer.weights.set(change.x, change.y, change.weight);
+                    change.layer.set(change.x, change.y, change.weight);
                 }
             }
             trainingCycles++;
         }
+        console.log(error);
         return trainingCycles;
     }
 }
