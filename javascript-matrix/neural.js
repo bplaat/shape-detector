@@ -103,8 +103,8 @@ export class NeuralNetwork {
         while (error > maxError) {
             const changes = [];
             for (const layer of this.layers) {
-                const y = randint(0, layer.rows - 1);
                 const x = randint(0, layer.columns - 1);
+                const y = randint(0, layer.rows - 1);
                 const weight = layer.get(x, y);
                 changes.push({ layer, x, y, weight });
                 layer.set(x, y, weight + (Math.random() * 2 - 1) / 100);

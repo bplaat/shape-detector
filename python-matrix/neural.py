@@ -9,7 +9,7 @@ def relu(x):
     return max(0, x)
 
 class NeuralNetwork:
-    def __init__(self, layers=[], activation='sigmoid'):
+    def __init__(self, layers, activation='sigmoid'):
         self.activation = activation
         self.layers = []
         for i in range(len(layers) - 1):
@@ -58,8 +58,8 @@ class NeuralNetwork:
         while error > maxError:
             changes = []
             for layer in self.layers:
-                y = random.randint(0, len(layer) - 1)
                 x = random.randint(0, len(layer[0]) - 1)
+                y = random.randint(0, len(layer) - 1)
                 changes.append({ 'layer': layer, 'x': x, 'y': y, 'weight': layer[y][x] })
                 layer[y][x] += random.uniform(-1, 1) / 100
 
