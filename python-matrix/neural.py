@@ -1,19 +1,29 @@
+import math
 import numpy as np
 import random
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    return 1 / (1 + math.exp(-x))
+
+def relu(x):
+    return max(0, x)
 
 class NeuralNetwork:
-    def __init__(self, layers):
+    def __init__(self, layers=[], activation='sigmoid'):
+        self.activation = activation
         self.layers = []
         for i in range(len(layers) - 1):
-            self.layers.append(np.array([ [ random.uniform(0, 1) for x in range(layers[i]) ] for y in range(layers[i + 1]) ]))
+            self.layers.append(np.array([ [ random.uniform(-1, 1) for x in range(layers[i]) ] for y in range(layers[i + 1]) ]))
 
     def run(self, inputs):
         result = np.array(inputs)
         for layer in self.layers:
-            result = sigmoid(layer.dot(result))
+            result = layer.dot(result)
+            for i in range(len(result)):
+                if self.activation == 'sigmoid':
+                    result[i] = sigmoid(result[i])
+                if self.activation == 'relu':
+                    result[i] = relu(result[i])
         return result
 
     def likely(self, input):

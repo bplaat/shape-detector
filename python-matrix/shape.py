@@ -2,7 +2,7 @@ import data
 from neural import NeuralNetwork
 
 if __name__ == '__main__':
-    network = NeuralNetwork(layers=[ data.inputDim, 6, data.outputDim ])
+    network = NeuralNetwork([ data.inputDim, 6, 6, data.outputDim ])
 
     print('Training...')
     trainingCycles = network.train(data.trainingSet, data.maxError)
