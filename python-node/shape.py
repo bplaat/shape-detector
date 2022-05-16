@@ -1,36 +1,26 @@
 import data, math, random
 
-# Globals I know it is ugly
-dataSource = None
-dataIndex = None
-
 def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 class ValueHolder:
     def getValue(self):
-        pass
+        raise NotImplementedError()
 
 class Link(ValueHolder):
     def __init__(self, inputNode):
-        self.weight = random.uniform(0, 1)
+        self.weight = random.uniform(-1, 1)
         self.inputNode = inputNode
 
     def getValue(self):
         return self.weight * self.inputNode.getValue()
 
-
 class Node(ValueHolder):
     pass
 
-
 class InputNode(Node):
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
     def getValue(self):
-        return dataSource[dataIndex][0][self.y][self.x]
+        return self.value
 
 class OutputNode(Node):
     def __init__(self, links):
@@ -39,72 +29,60 @@ class OutputNode(Node):
     def getValue(self):
         return sigmoid(sum([ link.getValue() for link in self.links ]))
 
-
 class NeuralNetwork:
-    def __init__(self):
+    def __init__(self, inputs, outputs):
         self.inputNodes = []
-        for y in range(3):
-            for x in range(3):
-                self.inputNodes.append(InputNode(x, y))
+        for i in range(inputs):
+            self.inputNodes.append(InputNode())
 
-        self.circleOutputNode = OutputNode([ Link(inputNode) for inputNode in self.inputNodes ])
-        self.crossOutputNode = OutputNode([ Link(inputNode) for inputNode in self.inputNodes ])
+        self.outputNodes = []
+        for i in range(outputs):
+            self.outputNodes.append(OutputNode([ Link(inputNode) for inputNode in self.inputNodes ]))
 
-    def learn(self):
-        global dataSource, dataIndex
-        dataSource = data.trainingSet
+    def run(self, input):
+        for i, value in enumerate(input):
+            self.inputNodes[i].value = value
+        return [ outputNode.getValue() for outputNode in self.outputNodes ]
 
-        previousErrorAvg = None
-        previousCircleLinkIndex = None
-        previousCircleLinkWeight = None
-        previousCrossLinkIndex = None
-        previousCrossLinkWeight = None
-        learningCycles = 0
-        while previousErrorAvg == None or previousErrorAvg > data.maxError:
-            learningCycles += 1
+    def __error(self, trainingItems, symbols):
+        errorSum = 0
+        for item in trainingItems:
+            result = self.run(item[0])
+            correct = symbols[item[1]]
+            errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(symbols)) ])
+        return errorSum / len(trainingItems)
 
-            errorSum = 0
-            for i in range(len(data.trainingSet)):
-                dataIndex = i
-                correct = data.outputDict[data.trainingSet[i][1]]
-                errorSum += (
-                    (self.circleOutputNode.getValue() - correct[0]) ** 2 +
-                    (self.crossOutputNode.getValue() - correct[1]) ** 2
-                )
-            errorAvg = errorSum / len(data.trainingSet)
-            if learningCycles % 50 == 0:
-                print('*' * round(100 * errorAvg))
+    def train(self, trainingItems, symbols, maxError):
+        trainingCycles = 0
+        error = self.__error(trainingItems, symbols)
+        while error > maxError:
+            changes = []
+            for outputNode in self.outputNodes:
+                index = random.randint(0, len(outputNode.links) - 1)
+                link = outputNode.links[index]
+                changes.append({ 'link': link, 'weight': link.weight })
+                link.weight += random.uniform(-1, 1) / 100
 
-            if previousErrorAvg != None and errorAvg > previousErrorAvg:
-                # print('Worse the previous')
-                errorAvg = previousErrorAvg
-                self.circleOutputNode.links[previousCircleLinkIndex].weight = previousCircleLinkWeight
-                self.crossOutputNode.links[previousCrossLinkIndex].weight = previousCrossLinkWeight
+            newError = self.__error(trainingItems, symbols)
+            if newError < error:
+                error = newError
+            else:
+                for change in changes:
+                    change['link'].weight = change['weight']
 
-            previousErrorAvg = errorAvg
+            trainingCycles += 1
 
-            previousCircleLinkIndex = random.randint(0, len(self.circleOutputNode.links) - 1)
-            previousCircleLinkWeight = self.circleOutputNode.links[previousCircleLinkIndex].weight
-            self.circleOutputNode.links[previousCircleLinkIndex].weight += random.uniform(-1, 1) / 100
+        return trainingCycles
 
-            previousCrossLinkIndex = random.randint(0, len(self.crossOutputNode.links) - 1)
-            previousCrossLinkWeight = self.crossOutputNode.links[previousCrossLinkIndex].weight
-            self.crossOutputNode.links[previousCrossLinkIndex].weight += random.uniform(-1, 1) / 100
-
-        print('Learning done in', learningCycles, 'cycles\n')
-
-    def test(self):
-        global dataSource, dataIndex
-        dataSource = data.testSet
-        for i in range(len(data.testSet)):
-            dataIndex = i
-            print(data.testSet[dataIndex])
-            print([ self.circleOutputNode.getValue(), self.crossOutputNode.getValue() ])
-            print(self.circleOutputNode.getValue() > self.crossOutputNode.getValue() and 'Circle' or 'Cross')
-            print()
-
-# Create neural network learn and test
+# Create neural network train and test
 if __name__ == '__main__':
-    network = NeuralNetwork()
-    network.learn()
-    network.test()
+    network = NeuralNetwork(data.inputDim, data.outputDim)
+
+    print('Training...')
+    trainingCycles = network.train(data.trainingSet, data.outputDict, data.maxError)
+    print('Training done in', trainingCycles, 'cycles!')
+
+    for item in data.testSet:
+        result = network.run(item[0])
+        correct = data.outputDict[item[1]]
+        print(result, correct, (result[0] > result[1]) == (correct[0] > correct[1]) and 'PASSED' or 'FAILED')

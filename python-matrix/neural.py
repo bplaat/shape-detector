@@ -19,8 +19,8 @@ class NeuralNetwork:
         for i in range(len(layers) - 1):
             self.layers.append(np.array([ [ random.uniform(-1, 1) for x in range(layers[i + 1]) ] for y in range(layers[i]) ]))
 
-    def run(self, inputs):
-        result = np.array(inputs)
+    def run(self, input):
+        result = np.array(input)
         for layer in self.layers:
             result = result.dot(layer)
             if self.activation == 'sigmoid':
@@ -85,15 +85,15 @@ class NeuralNetwork:
                     results.append(sigmoid(results[-1].dot(layer)))
 
                 lastError = None
-                for i in range(len(self.layers) - 1, -1, -1):
+                for i, layer in reversed(list(enumerate(self.layers))):
                     if i == len(self.layers) - 1:
-                        lastError = outputs - results[-1]
+                        lastError = outputs - results[i + 1]
                         error = np.mean(np.abs(lastError))
                     else:
                         lastError = lastError.dot(self.layers[i + 1].T)
 
                     layerDelta = lastError * sigmoid_derivative(results[i + 1])
-                    self.layers[i] += results[i].T.dot(layerDelta)
+                    layer += results[i].T.dot(layerDelta)
 
             trainingCycles += 1
         return trainingCycles
