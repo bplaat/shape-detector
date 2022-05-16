@@ -1,11 +1,20 @@
 import data, math, random
 
+# Our nice sigmoid function
 def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
+# All the node classes
 class ValueHolder:
     def getValue(self):
         raise NotImplementedError()
+
+class Node(ValueHolder):
+    pass
+
+class InputNode(Node):
+    def getValue(self):
+        return self.value
 
 class Link(ValueHolder):
     def __init__(self, inputNode):
@@ -15,13 +24,6 @@ class Link(ValueHolder):
     def getValue(self):
         return self.weight * self.inputNode.getValue()
 
-class Node(ValueHolder):
-    pass
-
-class InputNode(Node):
-    def getValue(self):
-        return self.value
-
 class OutputNode(Node):
     def __init__(self, links):
         self.links = links
@@ -29,21 +31,20 @@ class OutputNode(Node):
     def getValue(self):
         return sigmoid(sum([ link.getValue() for link in self.links ]))
 
+# Our neural network class
 class NeuralNetwork:
-    def __init__(self, inputs, outputs):
-        self.inputNodes = []
-        for i in range(inputs):
-            self.inputNodes.append(InputNode())
+    # Create input and outputs on init
+    def __init__(self, inputNodesCount, outputNodesCount):
+        self.inputNodes = [ InputNode() for i in range(inputNodesCount) ]
+        self.outputNodes = [ OutputNode([ Link(inputNode) for inputNode in self.inputNodes ]) for i in range(outputNodesCount) ]
 
-        self.outputNodes = []
-        for i in range(outputs):
-            self.outputNodes.append(OutputNode([ Link(inputNode) for inputNode in self.inputNodes ]))
-
+    # To run the network update all the input value nodes then get value from output nodes
     def run(self, input):
         for i, value in enumerate(input):
             self.inputNodes[i].value = value
         return [ outputNode.getValue() for outputNode in self.outputNodes ]
 
+    # To calculate the error subtract given value from wanted value and square that for each symbol for each training item
     def __error(self, trainingItems, symbols):
         errorSum = 0
         for item in trainingItems:
@@ -52,26 +53,25 @@ class NeuralNetwork:
             errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(symbols)) ])
         return errorSum / len(trainingItems)
 
+    # Adjust the weights random until the error value is less then the max error argument
     def train(self, trainingItems, symbols, maxError):
         trainingCycles = 0
         error = self.__error(trainingItems, symbols)
         while error > maxError:
             changes = []
             for outputNode in self.outputNodes:
-                index = random.randint(0, len(outputNode.links) - 1)
-                link = outputNode.links[index]
-                changes.append({ 'link': link, 'weight': link.weight })
-                link.weight += random.uniform(-1, 1) / 100
+                randomLink = outputNode.links[random.randint(0, len(outputNode.links) - 1)]
+                changes.append({ 'link': randomLink, 'oldWeight': randomLink.weight })
+                randomLink.weight += random.uniform(-1, 1) / 100
 
             newError = self.__error(trainingItems, symbols)
             if newError < error:
                 error = newError
             else:
                 for change in changes:
-                    change['link'].weight = change['weight']
+                    change['link'].weight = change['oldWeight']
 
             trainingCycles += 1
-
         return trainingCycles
 
 # Create neural network train and test
