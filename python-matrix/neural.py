@@ -22,7 +22,7 @@ class NeuralNetwork:
     def run(self, inputs):
         result = np.array(inputs)
         for layer in self.layers:
-            result = np.dot(result, layer)
+            result = result.dot(layer)
             if self.activation == 'sigmoid':
                 result = sigmoid(result)
             if self.activation == 'relu':
@@ -82,17 +82,18 @@ class NeuralNetwork:
 
                 results = [ inputs ]
                 for layer in self.layers:
-                    results.append(sigmoid(np.dot(results[-1], layer)))
+                    results.append(sigmoid(results[-1].dot(layer)))
 
                 lastError = None
-                lastDelta = None
                 for i in range(len(self.layers) - 1, -1, -1):
                     if i == len(self.layers) - 1:
                         lastError = outputs - results[-1]
                         error = np.mean(np.abs(lastError))
                     else:
                         lastError = lastError.dot(self.layers[i + 1].T)
-                    self.layers[i] += results[i].T.dot(lastError * sigmoid_derivative(results[i + 1]))
+
+                    layerDelta = lastError * sigmoid_derivative(results[i + 1])
+                    self.layers[i] += results[i].T.dot(layerDelta)
 
             trainingCycles += 1
         return trainingCycles
