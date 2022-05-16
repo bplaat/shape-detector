@@ -3,27 +3,30 @@ import numpy as np
 import random
 
 def sigmoid(x):
-    return 1 / (1 + math.exp(-x))
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
 
 def relu(x):
-    return max(0, x)
+    return np.maximum(0, x)
 
 class NeuralNetwork:
-    def __init__(self, layers, activation='sigmoid'):
+    def __init__(self, layers, activation='sigmoid', training='random'):
         self.activation = activation
+        self.training = training
         self.layers = []
         for i in range(len(layers) - 1):
-            self.layers.append(np.array([ [ random.uniform(-1, 1) for x in range(layers[i]) ] for y in range(layers[i + 1]) ]))
+            self.layers.append(np.array([ [ random.uniform(-1, 1) for x in range(layers[i + 1]) ] for y in range(layers[i]) ]))
 
     def run(self, inputs):
         result = np.array(inputs)
         for layer in self.layers:
-            result = layer.dot(result)
-            for i in range(len(result)):
-                if self.activation == 'sigmoid':
-                    result[i] = sigmoid(result[i])
-                if self.activation == 'relu':
-                    result[i] = relu(result[i])
+            result = np.dot(result, layer)
+            if self.activation == 'sigmoid':
+                result = sigmoid(result)
+            if self.activation == 'relu':
+                result = relu(result)
         return result
 
     def likely(self, input):
@@ -56,19 +59,40 @@ class NeuralNetwork:
         trainingCycles = 0
         error = self.__error(trainingItems)
         while error > maxError:
-            changes = []
-            for layer in self.layers:
-                x = random.randint(0, len(layer[0]) - 1)
-                y = random.randint(0, len(layer) - 1)
-                changes.append({ 'layer': layer, 'x': x, 'y': y, 'weight': layer[y][x] })
-                layer[y][x] += random.uniform(-1, 1) / 100
+            if self.training == 'random':
+                changes = []
+                for layer in self.layers:
+                    x = random.randint(0, len(layer[0]) - 1)
+                    y = random.randint(0, len(layer) - 1)
+                    changes.append({ 'layer': layer, 'x': x, 'y': y, 'weight': layer[y][x] })
+                    layer[y][x] += random.uniform(-1, 1) / 100
 
-            newError = self.__error(trainingItems)
-            if newError < error:
-                error = newError
-            else:
-                for change in changes:
-                    change['layer'][change['y']][change['x']] = change['weight']
+                newError = self.__error(trainingItems)
+                if newError < error:
+                    error = newError
+                else:
+                    for change in changes:
+                        change['layer'][change['y']][change['x']] = change['weight']
+
+            # I don't know what I'm doing, for more info:
+            # http://iamtrask.github.io/2015/07/12/basic-python-network/
+            if self.training == 'math':
+                inputs = np.array([ item[0] for item in trainingItems ])
+                outputs = np.array([ self.symbols[item[1]] for item in trainingItems ])
+
+                results = [ inputs ]
+                for layer in self.layers:
+                    results.append(sigmoid(np.dot(results[-1], layer)))
+
+                lastError = None
+                lastDelta = None
+                for i in range(len(self.layers) - 1, -1, -1):
+                    if i == len(self.layers) - 1:
+                        lastError = outputs - results[-1]
+                        error = np.mean(np.abs(lastError))
+                    else:
+                        lastError = lastError.dot(self.layers[i + 1].T)
+                    self.layers[i] += results[i].T.dot(lastError * sigmoid_derivative(results[i + 1]))
 
             trainingCycles += 1
         return trainingCycles
