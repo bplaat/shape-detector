@@ -33,7 +33,7 @@ class OutputNode(Node):
 
 # Our neural network class
 class NeuralNetwork:
-    # Create input and outputs on init
+    # Create input nodes and output nodes
     def __init__(self, inputNodesCount, outputNodesCount):
         self.inputNodes = [ InputNode() for i in range(inputNodesCount) ]
         self.outputNodes = [ OutputNode([ Link(inputNode) for inputNode in self.inputNodes ]) for i in range(outputNodesCount) ]
@@ -50,7 +50,7 @@ class NeuralNetwork:
         for item in trainingItems:
             result = self.run(item[0])
             correct = symbols[item[1]]
-            errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(symbols)) ])
+            errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(result)) ])
         return errorSum / len(trainingItems)
 
     # Adjust the weights random until the error value is less then the max error argument

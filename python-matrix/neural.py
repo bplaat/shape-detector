@@ -41,7 +41,7 @@ class NeuralNetwork:
         for item in trainingItems:
             result = self.run(item[0])
             correct = self.symbols[item[1]]
-            errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(self.symbols)) ])
+            errorSum += sum([ (result[i] - correct[i]) ** 2 for i in range(len(result)) ])
         return errorSum / len(trainingItems)
 
     def train(self, trainingItems, maxError):
