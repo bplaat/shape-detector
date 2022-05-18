@@ -1,5 +1,3 @@
-// gcc shape.c neural.c -o shape && ./shape
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "neural.h"
