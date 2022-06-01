@@ -17,12 +17,15 @@ class NeuralNetwork:
         self.training = training
         self.layers = []
         for i in range(len(layers) - 1):
-            self.layers.append(np.array([ [ random.uniform(-1, 1) for x in range(layers[i + 1]) ] for y in range(layers[i]) ]))
+            self.layers.append({
+                'weights': np.array([ [ random.uniform(-1, 1) for x in range(layers[i + 1]) ] for y in range(layers[i]) ]),
+                'biases': np.array([ random.uniform(-1, 1) for y in range(layers[i + 1]) ])
+            })
 
     def run(self, input):
         result = np.array(input)
         for layer in self.layers:
-            result = result.dot(layer)
+            result = result.dot(layer['weights']) + layer['biases']
             if self.activation == 'sigmoid':
                 result = sigmoid(result)
             if self.activation == 'relu':
@@ -62,27 +65,35 @@ class NeuralNetwork:
             if self.training == 'random':
                 changes = []
                 for layer in self.layers:
-                    x = random.randint(0, len(layer[0]) - 1)
-                    y = random.randint(0, len(layer) - 1)
-                    changes.append({ 'layer': layer, 'x': x, 'y': y, 'weight': layer[y][x] })
-                    layer[y][x] += random.uniform(-1, 1) / 100
+                    if random.randint(1, 10) != 1:
+                        x = random.randint(0, len(layer['weights'][0]) - 1)
+                        y = random.randint(0, len(layer['weights']) - 1)
+                        changes.append({ 'layer': layer, 'type': 'weight', 'x': x, 'y': y, 'oldWeight': layer['weights'][y][x] })
+                        layer['weights'][y][x] += random.uniform(-1, 1) / 100
+                    else:
+                        y = random.randint(0, len(layer['biases']) - 1)
+                        changes.append({ 'layer': layer, 'type': 'bias', 'y': y, 'oldBias': layer['biases'][y] })
+                        layer['biases'][y] += random.uniform(-1, 1) / 100
 
                 newError = self.__error(trainingItems)
                 if newError < error:
                     error = newError
                 else:
                     for change in changes:
-                        change['layer'][change['y']][change['x']] = change['weight']
+                        if change['type'] == 'weight':
+                            change['layer']['weights'][change['y']][change['x']] = change['oldWeight']
+                        if change['type'] == 'bias':
+                            change['layer']['biases'][change['y']] = change['oldBias']
 
             # I don't know what I'm doing, for more info:
             # http://iamtrask.github.io/2015/07/12/basic-python-network/
-            if self.training == 'math':
+            if self.training == 'math' and self.activation == 'sigmoid':
                 inputs = np.array([ item[0] for item in trainingItems ])
                 outputs = np.array([ self.symbols[item[1]] for item in trainingItems ])
 
                 results = [ inputs ]
                 for layer in self.layers:
-                    results.append(sigmoid(results[-1].dot(layer)))
+                    results.append(sigmoid(results[-1].dot(layer['weights'])))
 
                 lastError = None
                 for i, layer in reversed(list(enumerate(self.layers))):
@@ -90,10 +101,10 @@ class NeuralNetwork:
                         lastError = outputs - results[i + 1]
                         error = np.mean(np.abs(lastError))
                     else:
-                        lastError = lastError.dot(self.layers[i + 1].T)
+                        lastError = lastError.dot(self.layers[i + 1]['weights'].T)
 
                     layerDelta = lastError * sigmoid_derivative(results[i + 1])
-                    layer += results[i].T.dot(layerDelta)
+                    layer['weights'] += results[i].T.dot(layerDelta)
 
             trainingCycles += 1
         return trainingCycles
